@@ -1,20 +1,18 @@
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import { LatLngExpression } from "leaflet";
 
-const Map = () => {
-  const position: LatLngExpression = [37.5665, 126.978]; // 서울 좌표
-
+export default function Map() {
   return (
-    <MapContainer center={position} zoom={13} style={{ width: "100%", height: "500px" }}>
+    <MapContainer center={[51.505, -0.09]} zoom={13} scrollWheelZoom={false}>
       <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <Marker position={position}>
-        <Popup>서울 시청</Popup>
+      <Marker position={[51.505, -0.09]}>
+        <Popup>
+          A pretty CSS3 popup. <br /> Easily customizable.
+        </Popup>
       </Marker>
     </MapContainer>
   );
-};
+}
 
-export default Map;
