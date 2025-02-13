@@ -1,72 +1,81 @@
-import { useEffect } from "react";
-import { useMap } from "react-leaflet";
+import { useEffect, useRef } from "react";
 import * as THREE from "three";
+import { useMap } from "react-leaflet";
+
+const objectPositions = [
+  { lat: 37.5665, lng: 126.9780 }, // 서울
+  { lat: 35.1796, lng: 129.0756 }, // 부산
+  { lat: 37.4563, lng: 126.7052 }, // 인천
+];
 
 const ThreeDLayer = () => {
   const map = useMap();
+  const threeContainerRef = useRef<HTMLDivElement | null>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const cameraRef = useRef<THREE.Camera | null>(null);
 
   useEffect(() => {
-    if (!map) {
-      console.error("❌ Leaflet Map이 아직 준비되지 않음");
-      return;
-    }
+    if (!threeContainerRef.current) return;
 
-    console.log("🗺️ Leaflet Map 객체:", map);
+    console.log("🗺️ Leaflet 지도 객체:", map);
 
-    // Three.js 컨테이너 생성
-    const threeContainer = document.createElement("div");
-    threeContainer.style.position = "absolute";
-    threeContainer.style.top = "0";
-    threeContainer.style.left = "0";
-    threeContainer.style.width = "100%";
-    threeContainer.style.height = "100%";
-    threeContainer.style.pointerEvents = "none"; //지도와의 충돌 방지
-    threeContainer.style.zIndex="1000"; // 지도 위에 배치
-
-    map.getContainer().appendChild(threeContainer);
-    console.log("✅ Three.js 컨테이너 추가됨");
-
-    // Three.js Scene, Camera, Renderer 생성
+    // 🌍 Three.js 기본 설정
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.z = 5;
+    sceneRef.current = scene;
+    console.log("✅ Three.js 씬 생성됨");
+
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    
+    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+    camera.position.set(0, 0, 500);
+    cameraRef.current = camera;
+    console.log("🎥 Three.js 카메라 설정 완료");
 
     const renderer = new THREE.WebGLRenderer({ alpha: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    threeContainer.appendChild(renderer.domElement);
+    renderer.setSize(width, height);
+    renderer.domElement.style.position = "absolute";
+    renderer.domElement.style.top = "0";
+    renderer.domElement.style.left = "0";
+    renderer.domElement.style.zIndex = "1000"; // 🟢 지도 위로 배치
+    renderer.domElement.style.pointerEvents = "none"; // 📌 지도 이벤트 충돌 방지
 
-    console.log("🎨 Three.js Renderer 생성됨:", renderer);
+    threeContainerRef.current.appendChild(renderer.domElement);
+    rendererRef.current = renderer;
+    console.log("🎨 Three.js 렌더러 생성 완료");
 
-    // WebGL 지원 여부 확인
-    if (!renderer.domElement.getContext) {
-      console.error("❌ WebGL을 지원하지 않는 환경입니다!");
-      return;
-    }
+    // 🏗️ 3D 오브젝트 추가
+    const geometry = new THREE.BoxGeometry(50, 50, 50);
+    const material = new THREE.MeshBasicMaterial({ color: "red", wireframe: true });
 
-    // 3D 오브젝트 추가 (큐브)
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-    const cube = new THREE.Mesh(geometry, material);
-    scene.add(cube);
-    console.log("🟩 3D 큐브 추가됨");
+    objectPositions.forEach(({ lat, lng }, index) => {
+      const point = map.latLngToLayerPoint([lat, lng]); // 🟢 Leaflet 좌표 변환
+      console.log(`📌 변환된 좌표 (${index + 1}): 위도 ${lat}, 경도 ${lng} → 픽셀 좌표 (${point.x}, ${point.y})`);
 
-    // 애니메이션 루프
+      const cube = new THREE.Mesh(geometry, material);
+      cube.position.set(point.x - width / 2, -point.y + height / 2, 0); // 📌 Three.js 좌표 적용
+      scene.add(cube);
+      console.log(`🟩 3D 큐브 추가됨 (${index + 1}): Three.js 좌표 (${cube.position.x}, ${cube.position.y}, ${cube.position.z})`);
+    });
+
+    // 🎥 애니메이션 루프
     const animate = () => {
       requestAnimationFrame(animate);
-      cube.rotation.x += 0.01;
-      cube.rotation.y += 0.01;
       renderer.render(scene, camera);
-      console.log("🔄 애니메이션 실행됨");
+      console.log("🔄 애니메이션 프레임 실행됨");
     };
     animate();
 
     return () => {
-      console.log("🧹 정리됨");
-      threeContainer.remove();
+      console.log("🧹 Three.js 정리됨");
+      if (threeContainerRef.current) {
+        threeContainerRef.current.removeChild(renderer.domElement);
+      }
     };
   }, [map]);
 
-  return null;
+  return <div ref={threeContainerRef} className="three-container"></div>;
 };
 
 export default ThreeDLayer;
